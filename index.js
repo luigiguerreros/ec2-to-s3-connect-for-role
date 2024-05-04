@@ -56,9 +56,7 @@ async function uploadFileToS3(bucket, fileName, filePath, credentials) {
 
     try {
         await s3Client.send(new PutObjectCommand(uploadParams));
-        const fileUrl = `${process.env.URI_BASE}/${key}`;
-        console.log('File uploaded successfully. File URL:', fileUrl);
-        return fileUrl;
+        return `${process.env.URI_BASE}/${key}`;
     } catch (err) {
         console.error("Error during file upload:", err);
         throw err;
@@ -69,7 +67,7 @@ async function main() {
     try {
         const credentials = await assumeRoleAndExecuteActions(process.env.ROLE_ARN_SOCIOS, "sesionFinancieraSocios");
         const fileUrl = await uploadFileToS3(process.env.BUCKET_SOCIOS, process.env.FILE_NAME_SOCIOS, process.env.FILE_PATH_SOCIOS, credentials);
-        console.log('File uploaded successfully. File URL:', fileUrl);
+        console.log('File uploaded successfully. File URL:', fileUrl);  // Keep only this log
     } catch (error) {
         console.error('Error:', error.message);
     }
