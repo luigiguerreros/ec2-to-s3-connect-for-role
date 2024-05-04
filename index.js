@@ -9,20 +9,28 @@ let lastAssumeRoleTime = 0;
 
 function getContentType(fileName) {
     const extension = fileName.split('.').pop().toLowerCase();
-    return {
-        jpg: 'image/jpeg',
-        jpeg: 'image/jpeg',
-        png: 'image/png'
-    }[extension] || 'application/octet-stream';
+    switch (extension) {
+        case 'jpg':
+        case 'jpeg':
+            return 'image/jpeg';
+        case 'png':
+            return 'image/png';
+        default:
+            return 'application/octet-stream'; // Tipo genérico para binarios
+    }
 }
 
 async function assumeRoleAndExecuteActions(roleArn, sessionName) {
     const now = Date.now();
-    if (!cachedCredentials || (now - lastAssumeRoleTime) > 840000) { // 14 minutes
+    if (!cachedCredentials || (now - lastAssumeRoleTime) > 840000) { // 14 minutes to refresh credentials
         const stsClient = new STSClient({ region });
         const params = { RoleArn: roleArn, RoleSessionName: sessionName, DurationSeconds: 900 };
         const { Credentials } = await stsClient.send(new AssumeRoleCommand(params));
-        cachedCredentials = Credentials;
+        cachedCredentials = {
+            accessKeyId: Credentials.AccessKeyId,
+            secretAccessKey: Credentials.SecretAccessKey,
+            sessionToken: Credentials.SessionToken
+        };
         lastAssumeRoleTime = now;
         console.log("Credentials successfully retrieved.");
     }
@@ -46,8 +54,15 @@ async function uploadFileToS3(bucket, fileName, filePath, credentials) {
         ContentType: contentType
     };
 
-    await s3Client.send(new PutObjectCommand(uploadParams));
-    return `${process.env.URI_BASE}/${key}`;
+    try {
+        await s3Client.send(new PutObjectCommand(uploadParams));
+        const fileUrl = `${process.env.URI_BASE}/${encodeURIComponent(key)}`;
+        console.log('File uploaded successfully. File URL:', fileUrl);
+        return fileUrl;
+    } catch (err) {
+        console.error("Error during file upload:", err);
+        throw err;
+    }
 }
 
 async function main() {
