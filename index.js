@@ -14,7 +14,7 @@ function getContentType(fileName) {
         case 'png':
             return 'image/png';
         default:
-            return 'application/octet-stream'; // Tipo genérico para archivos binarios
+            return 'application/octet-stream'; // Tipo genérico para binarios
     }
 }
 
@@ -47,19 +47,22 @@ async function uploadFileToS3(bucket, fileName, filePath, credentials) {
         }
     });
 
+    // Usa la variable de entorno para la ruta del directorio
+    const key = `${process.env.PATH_DIR_S3}/${fileName}`;
+
     const fileStream = fs.createReadStream(filePath);
     const contentType = getContentType(fileName);
 
     const uploadParams = {
         Bucket: bucket,
-        Key: fileName,
+        Key: key,
         Body: fileStream,
         ContentType: contentType
     };
 
     try {
-        const data = await s3Client.send(new PutObjectCommand(uploadParams));
-        console.log('File uploaded successfully. Location:', data.Location);
+        await s3Client.send(new PutObjectCommand(uploadParams));
+        console.log('File uploaded successfully.');
     } catch (err) {
         console.error("Error al subir el archivo", err);
         throw err;
