@@ -1,5 +1,6 @@
 require('dotenv').config();
-const { STSClient, AssumeRoleCommand, S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { STSClient, AssumeRoleCommand } = require("@aws-sdk/client-sts"); // Correct import for STS
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const fs = require('fs');
 
 const region = process.env.AWS_REGION;
@@ -15,14 +16,18 @@ function getContentType(extension) {
 }
 
 async function getCredentials(roleArn, sessionName) {
-    if (!cachedCredentials || Date.now() - lastAssumeRoleTime > 840000) { // 14 minutes
+    if (!cachedCredentials || Date.now() - lastAssumeRoleTime > 840000) { // 14 minutes to refresh credentials
         const stsClient = new STSClient({ region });
         const { Credentials } = await stsClient.send(new AssumeRoleCommand({
             RoleArn: roleArn,
             RoleSessionName: sessionName,
             DurationSeconds: 900
         }));
-        cachedCredentials = Credentials;
+        cachedCredentials = {
+            accessKeyId: Credentials.AccessKeyId,
+            secretAccessKey: Credentials.SecretAccessKey,
+            sessionToken: Credentials.SessionToken
+        };
         lastAssumeRoleTime = Date.now();
         console.log("Credentials successfully retrieved.");
     }
