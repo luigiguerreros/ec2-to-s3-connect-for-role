@@ -4,36 +4,35 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const fs = require('fs');
 
 const region = process.env.AWS_REGION;
+let cachedCredentials = null;
+let lastAssumeRoleTime = 0;
 
 function getContentType(fileName) {
     const extension = fileName.split('.').pop().toLowerCase();
-    switch (extension) {
-        case 'jpg':
-        case 'jpeg':
-            return 'image/jpeg';
-        case 'png':
-            return 'image/png';
-        default:
-            return 'application/octet-stream'; // Tipo genérico para binarios
-    }
+    return {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png'
+    }[extension] || 'application/octet-stream';
 }
 
 async function assumeRoleAndExecuteActions(roleArn, sessionName) {
-    const stsClient = new STSClient({ region });
-    const params = { RoleArn: roleArn, RoleSessionName: sessionName, DurationSeconds: 900 };
-    const { Credentials } = await stsClient.send(new AssumeRoleCommand(params));
-    console.log("Credentials successfully retrieved.");
-    return Credentials;
+    const now = Date.now();
+    if (!cachedCredentials || (now - lastAssumeRoleTime) > 840000) { // 14 minutes
+        const stsClient = new STSClient({ region });
+        const params = { RoleArn: roleArn, RoleSessionName: sessionName, DurationSeconds: 900 };
+        const { Credentials } = await stsClient.send(new AssumeRoleCommand(params));
+        cachedCredentials = Credentials;
+        lastAssumeRoleTime = now;
+        console.log("Credentials successfully retrieved.");
+    }
+    return cachedCredentials;
 }
 
 async function uploadFileToS3(bucket, fileName, filePath, credentials) {
     const s3Client = new S3Client({
         region,
-        credentials: {
-            accessKeyId: credentials.AccessKeyId,
-            secretAccessKey: credentials.SecretAccessKey,
-            sessionToken: credentials.SessionToken
-        }
+        credentials
     });
 
     const key = `${process.env.PATH_DIR_S3}/${fileName}`;
