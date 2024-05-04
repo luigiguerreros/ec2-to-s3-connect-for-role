@@ -56,7 +56,7 @@ async function uploadFileToS3(bucket, fileName, filePath, credentials) {
 
     try {
         await s3Client.send(new PutObjectCommand(uploadParams));
-        const fileUrl = `${process.env.URI_BASE}/${encodeURIComponent(key)}`;
+        const fileUrl = `${process.env.URI_BASE}/${key}`;
         console.log('File uploaded successfully. File URL:', fileUrl);
         return fileUrl;
     } catch (err) {
