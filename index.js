@@ -48,7 +48,7 @@ async function uploadFileToS3(bucket, fileName, filePath, credentials) {
     };
 
     await s3Client.send(new PutObjectCommand(uploadParams));
-    return `${process.env.URI_BASE}/${encodeURIComponent(key)}`;
+    return `${process.env.URI_BASE}/${key}`;
 }
 
 async function main() {
