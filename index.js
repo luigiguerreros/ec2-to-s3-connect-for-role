@@ -1,8 +1,22 @@
+require('dotenv').config();
 const { STSClient, AssumeRoleCommand } = require("@aws-sdk/client-sts");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const fs = require('fs');
 
-const region = "tu-region"; // Asegúrate de cambiar esto por tu región de AWS
+const region = process.env.AWS_REGION;
+
+function getContentType(fileName) {
+    const extension = fileName.split('.').pop().toLowerCase();
+    switch (extension) {
+        case 'jpg':
+        case 'jpeg':
+            return 'image/jpeg';
+        case 'png':
+            return 'image/png';
+        default:
+            return 'application/octet-stream'; // Tipo genérico para archivos binarios
+    }
+}
 
 async function assumeRoleAndExecuteActions(roleArn, sessionName) {
     const stsClient = new STSClient({ region });
@@ -10,7 +24,7 @@ async function assumeRoleAndExecuteActions(roleArn, sessionName) {
     const params = {
         RoleArn: roleArn,
         RoleSessionName: sessionName,
-        DurationSeconds: 3600, // La sesión dura 1 hora
+        DurationSeconds: 120,
     };
 
     try {
@@ -29,12 +43,13 @@ async function uploadFileToS3(bucket, fileName, filePath, credentials) {
     });
 
     const fileStream = fs.createReadStream(filePath);
+    const contentType = getContentType(fileName);
 
     const uploadParams = {
         Bucket: bucket,
         Key: fileName,
         Body: fileStream,
-        ContentType: 'image/jpeg' // Ajusta según el tipo de archivo que estés subiendo
+        ContentType: contentType
     };
 
     try {
@@ -46,11 +61,10 @@ async function uploadFileToS3(bucket, fileName, filePath, credentials) {
     }
 }
 
-// Ejemplo de uso
-const roleArnSocios = "arn:aws:iam::account-id:role/rol-financiera-socios";
-const bucketSocios = "bucket-A";
-const fileNameSocios = "fileSocios.jpg";
-const filePathSocios = "/path/to/fileSocios.jpg";
+const roleArnSocios = process.env.ROLE_ARN_SOCIOS;
+const bucketSocios = process.env.BUCKET_SOCIOS;
+const fileNameSocios = process.env.FILE_NAME_SOCIOS;
+const filePathSocios = process.env.FILE_PATH_SOCIOS;
 
 assumeRoleAndExecuteActions(roleArnSocios, "sesionFinancieraSocios")
     .then(credentials => uploadFileToS3(bucketSocios, fileNameSocios, filePathSocios, credentials))
