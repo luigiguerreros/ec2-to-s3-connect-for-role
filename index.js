@@ -24,7 +24,7 @@ async function assumeRoleAndExecuteActions(roleArn, sessionName) {
     const params = {
         RoleArn: roleArn,
         RoleSessionName: sessionName,
-        DurationSeconds: 120,
+        DurationSeconds: 3600,
     };
 
     try {
