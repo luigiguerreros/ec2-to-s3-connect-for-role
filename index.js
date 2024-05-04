@@ -40,7 +40,11 @@ async function assumeRoleAndExecuteActions(roleArn, sessionName) {
 async function uploadFileToS3(bucket, fileName, filePath, credentials) {
     const s3Client = new S3Client({
         region,
-        credentials
+        credentials: {
+            accessKeyId: credentials.AccessKeyId,
+            secretAccessKey: credentials.SecretAccessKey,
+            sessionToken: credentials.SessionToken
+        }
     });
 
     const fileStream = fs.createReadStream(filePath);
