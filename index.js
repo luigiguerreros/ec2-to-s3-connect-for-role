@@ -20,7 +20,7 @@ function getContentType(fileName) {
 
 async function assumeRoleAndExecuteActions(roleArn, sessionName) {
     const stsClient = new STSClient({ region });
-    const params = { RoleArn: roleArn, RoleSessionName: sessionName, DurationSeconds: 3600 };
+    const params = { RoleArn: roleArn, RoleSessionName: sessionName, DurationSeconds: 900 };
     const { Credentials } = await stsClient.send(new AssumeRoleCommand(params));
     console.log("Credentials successfully retrieved.");
     return Credentials;
