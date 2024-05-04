@@ -20,21 +20,10 @@ function getContentType(fileName) {
 
 async function assumeRoleAndExecuteActions(roleArn, sessionName) {
     const stsClient = new STSClient({ region });
-
-    const params = {
-        RoleArn: roleArn,
-        RoleSessionName: sessionName,
-        DurationSeconds: 3600,
-    };
-
-    try {
-        const { Credentials } = await stsClient.send(new AssumeRoleCommand(params));
-        console.log("Credentials Success");
-        return Credentials;
-    } catch (err) {
-        console.error("Error al asumir el rol", err);
-        throw err;
-    }
+    const params = { RoleArn: roleArn, RoleSessionName: sessionName, DurationSeconds: 3600 };
+    const { Credentials } = await stsClient.send(new AssumeRoleCommand(params));
+    console.log("Credentials successfully retrieved.");
+    return Credentials;
 }
 
 async function uploadFileToS3(bucket, fileName, filePath, credentials) {
@@ -47,9 +36,7 @@ async function uploadFileToS3(bucket, fileName, filePath, credentials) {
         }
     });
 
-    // Usa la variable de entorno para la ruta del directorio
     const key = `${process.env.PATH_DIR_S3}/${fileName}`;
-
     const fileStream = fs.createReadStream(filePath);
     const contentType = getContentType(fileName);
 
@@ -60,22 +47,18 @@ async function uploadFileToS3(bucket, fileName, filePath, credentials) {
         ContentType: contentType
     };
 
+    await s3Client.send(new PutObjectCommand(uploadParams));
+    return `${process.env.URI_BASE}/${encodeURIComponent(key)}`;
+}
+
+async function main() {
     try {
-        await s3Client.send(new PutObjectCommand(uploadParams));
-        const fileUrl = `${process.env.URI_BASE}/${process.env.PATH_DIR_S3}/${fileName}`;
+        const credentials = await assumeRoleAndExecuteActions(process.env.ROLE_ARN_SOCIOS, "sesionFinancieraSocios");
+        const fileUrl = await uploadFileToS3(process.env.BUCKET_SOCIOS, process.env.FILE_NAME_SOCIOS, process.env.FILE_PATH_SOCIOS, credentials);
         console.log('File uploaded successfully. File URL:', fileUrl);
-        return fileUrl; // Devuelve la URL para usar en otra parte si es necesario
-    } catch (err) {
-        console.error("Error al subir el archivo", err);
-        throw err;
+    } catch (error) {
+        console.error('Error:', error.message);
     }
 }
 
-const roleArnSocios = process.env.ROLE_ARN_SOCIOS;
-const bucketSocios = process.env.BUCKET_SOCIOS;
-const fileNameSocios = process.env.FILE_NAME_SOCIOS;
-const filePathSocios = process.env.FILE_PATH_SOCIOS;
-
-assumeRoleAndExecuteActions(roleArnSocios, "sesionFinancieraSocios")
-    .then(credentials => uploadFileToS3(bucketSocios, fileNameSocios, filePathSocios, credentials))
-    .catch(err => console.error(err));
+main();
