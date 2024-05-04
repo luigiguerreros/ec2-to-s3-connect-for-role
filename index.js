@@ -29,6 +29,7 @@ async function assumeRoleAndExecuteActions(roleArn, sessionName) {
 
     try {
         const { Credentials } = await stsClient.send(new AssumeRoleCommand(params));
+        console.log("Credentials received:", Credentials);
         return Credentials;
     } catch (err) {
         console.error("Error al asumir el rol", err);
