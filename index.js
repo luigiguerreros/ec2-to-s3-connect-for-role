@@ -29,7 +29,7 @@ async function assumeRoleAndExecuteActions(roleArn, sessionName) {
 
     try {
         const { Credentials } = await stsClient.send(new AssumeRoleCommand(params));
-        console.log("Credentials received:", Credentials);
+        console.log("Credentials Success");
         return Credentials;
     } catch (err) {
         console.error("Error al asumir el rol", err);
@@ -62,7 +62,9 @@ async function uploadFileToS3(bucket, fileName, filePath, credentials) {
 
     try {
         await s3Client.send(new PutObjectCommand(uploadParams));
-        console.log('File uploaded successfully.');
+        const fileUrl = `${process.env.URI_BASE}/${encodeURIComponent(key)}`;
+        console.log('File uploaded successfully. File URL:', fileUrl);
+        return fileUrl; // Devuelve la URL para usar en otra parte si es necesario
     } catch (err) {
         console.error("Error al subir el archivo", err);
         throw err;
